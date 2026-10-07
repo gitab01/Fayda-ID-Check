@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fayda-ID Check — National ID verification with on-device liveness</title>
+<meta name="description" content="Identity verification case study: Flutter capture, Spring Boot orchestration, TensorFlow liveness and face matching, with ephemeral biometric handling.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <nav class="topbar">
+      <a href="#top" class="crumb">Projects</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb current">Fayda-ID Check</span>
+      <a href="#solution" class="toplink">Read the case study</a>
+    </nav>
+
+    <div class="masthead-main">
+      <p class="eyebrow">Mobile App &nbsp;·&nbsp; Identity verification / AI</p>
+      <h1>Fayda-ID&nbsp;Check</h1>
+      <p class="lede">National ID verification with on-device liveness detection and face matching — designed so a photo of a photo cannot pass, and biometric data never leaves the device unencrypted.</p>
+    </div>
+
+    <dl class="meta">
+      <div><dt>Role</dt><dd>Backend Developer · ML Integration</dd></div>
+      <div><dt>Timeline</dt><dd>9 weeks</dd></div>
+      <div><dt>Status</dt><dd>Complete — portfolio build</dd></div>
+      <div><dt>Deliverables</dt><dd>Source code</dd></div>
+    </dl>
+
+    <ul class="stack-list">
+      <li>Flutter</li><li>Dart</li><li>Python</li><li>TensorFlow</li><li>FastAPI</li><li>Spring&nbsp;Boot</li><li>MS&nbsp;SQL</li>
+    </ul>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- 01 -->
+  <section class="section" id="problem">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">01</span>
+        <h2 class="aside-title">Problem &amp; motivation</h2>
+      </aside>
+      <div class="body">
+        <p class="lead">Identity verification fails in two directions at once. Too strict and legitimate users cannot get through — usually the elderly, or anyone with a poor front camera. Too lenient and the whole system is worthless against a printed photo or a replayed video.</p>
+        <p>On top of that, biometric data is the most sensitive personal data there is. A pipeline that ships raw face images to a server and keeps them is a breach waiting to happen — which is why privacy constraints shaped the architecture before any model was chosen.</p>
+        <div class="block">
+          <h3 class="block-title">Core constraints</h3>
+          <ol class="constraints">
+            <li><span class="idx">C1</span><p>Presentation attacks — printed photos, screen replay, deepfakes — must be rejected, not merely low-quality captures.</p></li>
+            <li><span class="idx">C2</span><p>Face matching has to survive differing capture conditions: lighting, angle, and the age gap against the ID photo.</p></li>
+            <li><span class="idx">C3</span><p>Biometric payloads are encrypted in transit, processed ephemerally, and never persisted as raw images.</p></li>
+            <li><span class="idx">C4</span><p>Verification is auditable — an institution must be able to see <em>why</em> a check passed or failed.</p></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section class="section" id="solution">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">02</span>
+        <h2 class="aside-title">The solution</h2>
+      </aside>
+      <div class="body">
+        <p class="lead">A Flutter app captures the ID document and a live selfie, runs quality checks on-device, and sends an encrypted payload to a Spring Boot verification service. A Python / TensorFlow microservice handles liveness and face-embedding comparison, returning a scored decision plus an audit record — never a stored image.</p>
+
+        <ol class="pipeline">
+          <li>
+            <span class="step-num">01</span>
+            <h4>Capture ID</h4>
+            <p>The user photographs their national ID. On-device checks test glare, blur, framing and the presence of all four corners before upload is even offered.</p>
+          </li>
+          <li>
+            <span class="step-num">02</span>
+            <h4>Extract &amp; validate</h4>
+            <p>The document region is cropped, OCR pulls the ID number and name, and MRZ/checksum validation catches a fabricated document.</p>
+          </li>
+          <li>
+            <span class="step-num">03</span>
+            <h4>Liveness capture</h4>
+            <p>A short guided selfie sequence with randomized challenges — turn left, blink, tilt — is recorded and assessed for presentation-attack signals.</p>
+          </li>
+          <li>
+            <span class="step-num">04</span>
+            <h4>Match &amp; decide</h4>
+            <p>Embeddings from the selfie and the ID photo are compared. A composite of liveness, match and document scores resolves to PASS, REVIEW or FAIL.</p>
+          </li>
+        </ol>
+
+        <div class="block">
+          <h3 class="block-title">Features, and the reasoning behind them</h3>
+          <div class="reason-grid">
+            <article>
+              <h4>Challenge-response liveness</h4>
+              <p>Randomized action prompts, recorded per attempt.</p>
+              <p class="why"><span>Why</span> A pre-recorded video cannot answer a challenge it did not know was coming.</p>
+            </article>
+            <article>
+              <h4>On-device quality gating</h4>
+              <p>Blur, glare and framing are checked locally before any upload.</p>
+              <p class="why"><span>Why</span> Most failed attempts die on the phone — saving bandwidth and sparing the user a round-trip for an unusable capture.</p>
+            </article>
+            <article>
+              <h4>Embeddings, not images</h4>
+              <p>Matching runs on normalized face embeddings against a calibrated threshold.</p>
+              <p class="why"><span>Why</span> Robust to lighting and modest age differences, and no pixel-level image ever needs to persist.</p>
+            </article>
+            <article>
+              <h4>Scored, explainable decisions</h4>
+              <p>Each attempt stores its component scores and the reason for the outcome.</p>
+              <p class="why"><span>Why</span> An institution has to justify a rejection, and thresholds can only be tuned if the components are visible.</p>
+            </article>
+            <article>
+              <h4>Ephemeral biometric handling</h4>
+              <p>Images travel encrypted, live in memory, and are deleted once the embedding is computed.</p>
+              <p class="why"><span>Why</span> Minimising retention is the only real mitigation for a biometric breach.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section class="section" id="architecture">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">03</span>
+        <h2 class="aside-title">System architecture</h2>
+      </aside>
+      <div class="body">
+        <p class="lead">Two backend services with different responsibilities: Spring Boot owns identity, workflow state and audit; Python / TensorFlow owns inference and nothing else. Separating them lets the model be versioned, benchmarked and scaled independently of the application.</p>
+
+        <ol class="layers">
+          <li>
+            <span class="layer-num">1</span>
+            <div class="layer-text">
+              <h4>Mobile client</h4>
+              <p class="tags">Flutter · camera plugin · on-device quality checks</p>
+              <p>Guided capture flow, local blur and glare detection, encrypted upload, biometric unlock for the app itself.</p>
+            </div>
+          </li>
+          <li>
+            <span class="layer-num">2</span>
+            <div class="layer-text">
+              <h4>Verification service</h4>
+              <p class="tags">Spring Boot · JWT · workflow state machine</p>
+              <p>Owns the attempt lifecycle, calls the inference service, records decisions and audit entries.</p>
+            </div>
+          </li>
+          <li>
+            <span class="layer-num">3</span>
+            <div class="layer-text">
+              <h4>Inference service</h4>
+              <p class="tags">Python · FastAPI · TensorFlow</p>
+              <p>Stateless liveness and embedding endpoints. No database access, no user data retention.</p>
+            </div>
+          </li>
+          <li>
+            <span class="layer-num">4</span>
+            <div class="layer-text">
+              <h4>Data</h4>
+              <p class="tags">MS SQL Server</p>
+              <p>Scores, hashes and decision metadata. Never images.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="block">
+          <h3 class="block-title">Request flow</h3>
+          <div class="flow" role="img" aria-label="Flutter app gated on-device, uploading encrypted payload to Spring Boot, which calls a stateless Python inference service returning only scores, then writes a decision and audit record to MS SQL and discards the images.">
+            <div class="node">
+              <h5>Flutter app</h5>
+              <ul class="node-notes">
+                <li>on-device quality gate — blur, glare, framing</li>
+                <li>encrypted upload: TLS + payload encryption</li>
+              </ul>
+            </div>
+            <div class="arrow" aria-hidden="true"></div>
+            <div class="node">
+              <h5>Spring Boot verification service</h5>
+              <ul class="node-notes">
+                <li>attempt state machine · auth · audit</li>
+                <li>images in memory only</li>
+              </ul>
+            </div>
+            <div class="arrow" aria-hidden="true"></div>
+            <div class="node">
+              <h5>Python FastAPI inference <span class="pill">stateless</span></h5>
+              <ul class="node-notes">
+                <li>liveness model → attack score</li>
+                <li>embedding model → cosine similarity</li>
+              </ul>
+            </div>
+            <div class="arrow up" aria-hidden="true"><span>scores only — no images returned</span></div>
+            <div class="node">
+              <h5>Decision + audit</h5>
+              <ul class="node-notes">
+                <li>Spring Boot → PASS / REVIEW / FAIL → MS SQL record</li>
+                <li>images securely discarded</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section class="section" id="data">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">04</span>
+        <h2 class="aside-title">Database design</h2>
+      </aside>
+      <div class="body">
+        <p class="lead">The database stores decisions and metadata, never biometric images. A verification attempt is the aggregate; every component score and the final outcome attach to it for auditability.</p>
+
+        <div class="tables">
+          <article class="table-card">
+            <h4>users</h4>
+            <p class="table-note">App users and institutional accounts</p>
+            <ul class="cols"><li>id</li><li>nationalIdHash</li><li>fullName</li><li>phone</li><li>orgId</li><li>status</li></ul>
+          </article>
+          <article class="table-card">
+            <h4>verification_attempts</h4>
+            <p class="table-note">One attempt aggregate</p>
+            <ul class="cols"><li>id</li><li>userId</li><li>status&nbsp;<em>enum</em></li><li>deviceInfo</li><li>challengeSeed</li><li>startedAt</li><li>completedAt</li></ul>
+          </article>
+          <article class="table-card">
+            <h4>decision_records</h4>
+            <p class="table-note">Scored outcome and reasoning</p>
+            <ul class="cols"><li>id</li><li>attemptId</li><li>livenessScore</li><li>matchScore</li><li>docValidationScore</li><li>compositeScore</li><li>decision</li><li>thresholdVersion</li></ul>
+          </article>
+          <article class="table-card">
+            <h4>document_metadata</h4>
+            <p class="table-note">Non-biometric document facts</p>
+            <ul class="cols"><li>id</li><li>attemptId</li><li>documentType</li><li>idNumberHash</li><li>issuingRegion</li><li>expiryDate</li></ul>
+          </article>
+          <article class="table-card">
+            <h4>audit_log</h4>
+            <p class="table-note">Access and decision trail</p>
+            <ul class="cols"><li>id</li><li>actorId</li><li>action</li><li>attemptId</li><li>ipAddress</li><li>outcome</li><li>createdAt</li></ul>
+          </article>
+        </div>
+
+        <div class="split">
+          <div class="block">
+            <h3 class="block-title">Relationships</h3>
+            <ul class="bullets">
+              <li><code>verification_attempts</code> is 1—1 with <code>decision_records</code>; an attempt without a decision is visibly incomplete rather than silently failed.</li>
+              <li><code>document_metadata</code> links to the attempt and stores only a salted hash of the ID number — the raw number is never persisted.</li>
+              <li><code>thresholdVersion</code> on every decision lets a past outcome be reinterpreted when thresholds change, without rewriting history.</li>
+            </ul>
+          </div>
+          <div class="block">
+            <h3 class="block-title">Design rationale</h3>
+            <ul class="bullets">
+              <li>Hashes instead of raw identifiers limit exposure if the database is compromised.</li>
+              <li>Component scores are stored separately from the composite, so model tuning never requires re-running verification.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section class="section" id="implementation">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">05</span>
+        <h2 class="aside-title">Technical implementation</h2>
+      </aside>
+      <div class="body">
+        <div class="impl">
+          <article>
+            <h3 class="block-title">Frontend</h3>
+            <ul class="bullets">
+              <li>Guided capture with a live overlay: document outline alignment, glare detection, and a stability check before the shutter fires.</li>
+              <li>The liveness flow issues randomized prompts and records the challenge seed used, so the server can verify the sequence was actually followed.</li>
+              <li>Payloads are encrypted on-device and uploaded with a per-attempt key; the app never writes captures to the photo gallery.</li>
+            </ul>
+          </article>
+          <article>
+            <h3 class="block-title">Backend</h3>
+            <ul class="bullets">
+              <li>Spring Boot orchestrates the attempt state machine — <code>CREATED → CAPTURED → INFERRING → DECIDED</code> — with a timeout on each step.</li>
+              <li>Calls to inference carry a request-scoped id and no persistent identifiers, so inference logs cannot be joined back to a person.</li>
+              <li>Decision logic is a versioned, configuration-driven composite: weights and thresholds are data, not hardcoded branches.</li>
+              <li>Images live in memory for the duration of the attempt and are explicitly cleared afterwards; no temporary files on disk.</li>
+            </ul>
+          </article>
+          <article>
+            <h3 class="block-title">Deployment</h3>
+            <ul class="bullets">
+              <li>The inference service is containerized separately, with its model version pinned and recorded in every decision.</li>
+              <li>Health checks distinguish service availability from model load state, so a deployed-but-unloaded model cannot silently pass traffic.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 -->
+  <section class="section" id="security">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">06</span>
+        <h2 class="aside-title">Security</h2>
+      </aside>
+      <div class="body">
+        <div class="controls">
+          <article><h4>No raw biometric storage</h4><p>Images are processed in memory and discarded. Only scores, hashes and decision metadata persist.</p></article>
+          <article><h4>Encrypted capture pipeline</h4><p>TLS plus payload encryption with a per-attempt key; captures never touch the device gallery or local cache.</p></article>
+          <article><h4>Challenge-seed verification</h4><p>The server knows which prompts were issued and rejects a submission whose recorded sequence does not match.</p></article>
+          <article><h4>Hashed identifiers</h4><p>National ID numbers are stored salted-hashed, so a database leak does not expose identity numbers.</p></article>
+          <article><h4>Rate limiting &amp; attempt caps</h4><p>Repeated failures trigger step-up review instead of unlimited retries — a security control and an anti-abuse control.</p></article>
+          <article><h4>Full audit trail</h4><p>Every access to a verification record is logged with actor, IP address and outcome.</p></article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 -->
+  <section class="section" id="ai">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">07</span>
+        <h2 class="aside-title">AI implementation</h2>
+      </aside>
+      <div class="body">
+        <p class="lead">Two specialized models behind one decision function. Both were selected for explainability and latency, and both are calibrated against a held-out set rather than tuned by intuition.</p>
+
+        <div class="models">
+          <article>
+            <h4>Liveness / presentation-attack detection</h4>
+            <p>A CNN classifier over the captured frame sequence, trained to separate live capture from printed photos, screen replay and masks. It returns a continuous attack score, not a boolean.</p>
+          </article>
+          <article>
+            <h4>Face embedding &amp; matching</h4>
+            <p>A face-recognition backbone produces normalized embeddings for the selfie and the ID photo; cosine similarity is compared against a calibrated threshold.</p>
+          </article>
+          <article>
+            <h4>Document validation</h4>
+            <p>OCR extraction combined with format, checksum and field-consistency rules — a heuristic layer that catches fabricated documents the vision models would happily accept.</p>
+          </article>
+          <article>
+            <h4>Composite decision function</h4>
+            <p>A weighted combination of liveness, match and document scores, mapped to PASS / REVIEW / FAIL. The REVIEW band exists deliberately: a borderline case goes to a human rather than being forced into a binary.</p>
+          </article>
+          <article>
+            <h4>Threshold calibration</h4>
+            <p>Thresholds come from ROC analysis on a held-out set, choosing for a target false-accept rate first and then optimizing false rejects — because in identity verification, the false accept is the expensive error.</p>
+          </article>
+        </div>
+
+        <div class="block">
+          <h3 class="block-title">Decision bands</h3>
+          <div class="bands" role="img" aria-label="Composite score axis: FAIL band at the low end, REVIEW band in the middle routed to a human, PASS band at the high end.">
+            <div class="band fail"><span>FAIL</span></div>
+            <div class="band review"><span>REVIEW → human</span></div>
+            <div class="band pass"><span>PASS</span></div>
+          </div>
+          <div class="band-scale"><span>composite 0.0</span><span>thresholdVersion recorded per decision</span><span>1.0</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 -->
+  <section class="section" id="ux">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">08</span>
+        <h2 class="aside-title">User experience</h2>
+      </aside>
+      <div class="body">
+        <div class="split">
+          <div class="block">
+            <h3 class="block-title">First-time verification</h3>
+            <ol class="flowlist">
+              <li>Consent and privacy explanation</li>
+              <li>Capture ID with live alignment overlay</li>
+              <li>Guided liveness sequence</li>
+              <li>Wait for decision</li>
+              <li>See outcome and next step</li>
+            </ol>
+          </div>
+          <div class="block">
+            <h3 class="block-title">Retry after failure</h3>
+            <ol class="flowlist">
+              <li>See the specific reason for failure</li>
+              <li>Get targeted guidance — better light, remove glasses</li>
+              <li>Retry within a limit</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="block">
+          <h3 class="block-title">Key screens</h3>
+          <div class="screens">
+            <article><h4>Privacy consent</h4><p>Plain-language explanation of what is captured, that images are not stored, and how long the decision record is kept.</p></article>
+            <article><h4>ID capture</h4><p>Full-screen camera with a document outline, live glare and blur warnings, and automatic capture on stability.</p></article>
+            <article><h4>Liveness capture</h4><p>One prompt at a time, large text, with a progress indicator through the challenge sequence.</p></article>
+            <article><h4>Result</h4><p>A clear pass or fail with an explanation and, on failure, exactly what to change next time.</p></article>
+          </div>
+        </div>
+
+        <div class="block">
+          <h3 class="block-title">UX decisions</h3>
+          <div class="reason-grid two">
+            <article>
+              <h4>Explain before you capture</h4>
+              <p>Users who know why a step exists comply with it. Consent and instruction screens reduced abandonment noticeably.</p>
+            </article>
+            <article>
+              <h4>Fail with instructions, not just a reason</h4>
+              <p>“Poor lighting — move near a window and try again” is actionable. “Verification failed” is not.</p>
+            </article>
+            <article>
+              <h4>Automatic shutter</h4>
+              <p>Capturing only when the frame is stable removes the most common user error: a blurred photo taken too early.</p>
+            </article>
+            <article>
+              <h4>Accessibility first</h4>
+              <p>Large prompts, haptic and audio cues, and a slower pace option — verification is used by everyone, including people who are not comfortable with a camera.</p>
+            </article>
+            <article>
+              <h4>Honest waiting state</h4>
+              <p>Inference takes a few seconds; the UI shows the actual stage rather than an indeterminate spinner.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 -->
+  <section class="section" id="challenges">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">09</span>
+        <h2 class="aside-title">Challenges &amp; solutions</h2>
+      </aside>
+      <div class="body">
+        <div class="hardships">
+          <article>
+            <header><h4>Presentation attacks</h4><span class="badge hard">Hard</span></header>
+            <p class="label">Problem</p>
+            <p>A high-resolution printed photo initially passed the liveness check under good lighting.</p>
+            <p class="label">Solution</p>
+            <p>Added randomized challenge-response with a server-verified seed, plus texture and screen-moiré signals in the classifier. Attack attempts now fail at the challenge stage regardless of image quality.</p>
+          </article>
+          <article>
+            <header><h4>Match failures on legitimate users</h4><span class="badge hard">Hard</span></header>
+            <p class="label">Problem</p>
+            <p>ID photos are often years old and shot under different conditions, producing false rejects.</p>
+            <p class="label">Solution</p>
+            <p>Lowered the hard-reject threshold and introduced a REVIEW band routed to human verification, tuning for false-accept rate first and then minimizing false rejects inside that constraint.</p>
+          </article>
+          <article>
+            <header><h4>Biometric privacy exposure</h4><span class="badge hard">Hard</span></header>
+            <p class="label">Problem</p>
+            <p>Any pipeline that stores face images is a liability that grows with every user.</p>
+            <p class="label">Solution</p>
+            <p>Redesigned for ephemeral processing: memory-only handling, no disk temp files, payload encryption, and a schema that stores scores and hashes only.</p>
+          </article>
+          <article>
+            <header><h4>Inference latency on mobile networks</h4><span class="badge medium">Medium</span></header>
+            <p class="label">Problem</p>
+            <p>Uploading full-resolution captures made verification far too slow on 3G.</p>
+            <p class="label">Solution</p>
+            <p>On-device quality gating rejects bad captures locally, uploads are downscaled to the resolution the model actually needs, and the inference service was quantized for faster CPU response.</p>
+          </article>
+          <article>
+            <header><h4>Model and threshold drift</h4><span class="badge medium">Medium</span></header>
+            <p class="label">Problem</p>
+            <p>Changing a threshold silently reinterpreted the meaning of past decisions.</p>
+            <p class="label">Solution</p>
+            <p>Every decision records its <code>thresholdVersion</code> and model version, so history stays interpretable and rollbacks are traceable.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="section" id="quality">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">10</span>
+        <h2 class="aside-title">Performance &amp; quality</h2>
+      </aside>
+      <div class="body">
+        <div class="impl">
+          <article>
+            <h3 class="block-title">Optimizations</h3>
+            <ul class="bullets">
+              <li>On-device quality checks eliminate most failed attempts before any network call.</li>
+              <li>Quantized models and batched embedding computation keep inference within a few seconds on CPU.</li>
+              <li>The stateless inference service scales horizontally with no session affinity.</li>
+            </ul>
+          </article>
+          <article>
+            <h3 class="block-title">Error handling</h3>
+            <ul class="bullets">
+              <li>Inference timeouts fail the attempt into a retryable state rather than leaving it stuck in <code>INFERRING</code>.</li>
+              <li>Model load failures are surfaced by health checks and block traffic instead of returning default scores.</li>
+              <li>Client-side capture errors recover in place — the user retries the step, not the whole flow.</li>
+            </ul>
+          </article>
+          <article>
+            <h3 class="block-title">Testing</h3>
+            <ul class="bullets">
+              <li>Model evaluation on a held-out set, reporting false-accept and false-reject rates at each candidate threshold.</li>
+              <li>A presentation-attack suite using printed photos, screen replay and video playback.</li>
+              <li>End-to-end tests across device classes and simulated low-bandwidth conditions.</li>
+              <li>Audit and retention tests asserting that no image bytes survive an attempt.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="section" id="roadmap">
+    <div class="wrap grid">
+      <aside class="aside">
+        <span class="num">11</span>
+        <h2 class="aside-title">Future roadmap</h2>
+      </aside>
+      <div class="body">
+        <ol class="roadmap">
+          <li>
+            <span class="step-num">R1</span>
+            <h4>Document authenticity ML</h4>
+            <p>Train a classifier on document security features to complement the current rule-based validation.</p>
+          </li>
+          <li>
+            <span class="step-num">R2</span>
+            <h4>Institutional API</h4>
+            <p>Expose verification as an API for banks and government services, with org-scoped keys and webhooks.</p>
+          </li>
+          <li>
+            <span class="step-num">R3</span>
+            <h4>On-device inference</h4>
+            <p>Move liveness scoring to the device for the fastest path, keeping server-side matching as the authority.</p>
+          </li>
+          <li>
+            <span class="step-num">R4</span>
+            <h4>Continuous threshold review</h4>
+            <p>A monitoring pipeline that tracks score distributions over time and flags drift before it reaches users.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap foot">
+    <p class="foot-title">Fayda-ID Check</p>
+    <p class="foot-note">Portfolio build · backend and ML integration · 9 weeks. No biometric images are stored by this design.</p>
+    <ul class="stack-list small">
+      <li>Flutter</li><li>Dart</li><li>Python</li><li>TensorFlow</li><li>FastAPI</li><li>Spring&nbsp;Boot</li><li>MS&nbsp;SQL</li>
+    </ul>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

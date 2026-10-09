@@ -1,0 +1,32 @@
+# secrets
+.env
+*.pem
+*.jks
+*.keystore
+
+# JVM
+target/
+*.class
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# models are artifacts, not source
+backend/inference-service/models/**
+!backend/inference-service/models/.gitkeep
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins*
+mobile/.packages
+coverage/
+
+# scratch
+*.png.tmp
+scratch/

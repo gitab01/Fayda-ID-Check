@@ -1,0 +1,18 @@
+# Bundled fallback threshold profile — used when no active row exists in `threshold_profiles`
+# (fresh environment, read replica down, or a DB-less test run). Values are quoted so they bind
+# to BigDecimal exactly and never through a double.
+#
+# This is the profile the decision composite falls back on; `thresholdVersion` is stamped onto
+# every decision record either way, so history always says which numbers were in force.
+thresholds:
+  default:
+    version: "2026-05-1"
+    weight-liveness: "0.30"
+    weight-match: "0.55"
+    weight-document: "0.15"
+    pass-composite: "0.86000"
+    review-composite: "0.72000"
+    min-liveness: "0.35000"
+    min-match: "0.48000"
+    max-attempts: 3
+    calibrated-on: "bundled-default:heldout-2026-04"

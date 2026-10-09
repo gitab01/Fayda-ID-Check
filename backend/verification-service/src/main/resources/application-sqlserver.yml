@@ -1,0 +1,15 @@
+# MS SQL Server deployment (docker-compose and any real environment).
+# The schema is owned by Flyway; Hibernate never touches it, so a typo in an entity is a runtime
+# error against a migration that is already reviewed — not an automatic ALTER on a production box.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=fayda;encrypt=true;trustServerCertificate=true}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    database-platform: org.hibernate.dialect.SQLServerDialect
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true

@@ -1,0 +1,72 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    accept_eula: "true"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+      MSSQL_PID: Developer
+    ports:
+      - "11433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  inference:
+    build: ./backend/inference-service
+    environment:
+      INFERENCE_BACKEND: ${INFERENCE_BACKEND:-tf}
+      LIVENESS_MODEL_DIR: /models/liveness
+      EMBEDDING_MODEL_DIR: /models/embedding
+      MAX_REQUEST_BYTES: "8388608"
+      MAX_FRAMES: "12"
+    volumes:
+      # Produced by training/export.py. Read-only: this service must never write, and the
+      # image deliberately does not bake the artifacts in (see backend/inference-service/Dockerfile).
+      - ./backend/inference-service/models/liveness:/models/liveness:ro
+      - ./backend/inference-service/models/embedding:/models/embedding:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  verification:
+    build: ./backend/verification-service
+    depends_on:
+      db:
+        condition: service_healthy
+      inference:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-sqlserver,prod}
+      # createDatabaseIfNotExist is not decoration: the mssql/server image only provisions
+      # master, so without it Flyway's first connection fails on a missing `fayda`.
+      DB_URL: jdbc:sqlserver://db:1433;databaseName=fayda;createDatabaseIfNotExist=true;encrypt=true;trustServerCertificate=true
+      DB_USER: sa
+      DB_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      HASH_PEPPER: ${HASH_PEPPER:?set HASH_PEPPER in .env}
+      INFERENCE_BASE_URL: http://inference:8000
+      INFERENCE_TIMEOUT_MS: "10000"
+      ATTEMPT_RATE_LIMIT_PER_MINUTE: ${ATTEMPT_RATE_LIMIT_PER_MINUTE:-6}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+volumes:
+  mssql-data:

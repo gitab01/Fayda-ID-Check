@@ -1,0 +1,77 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+  shutdown: graceful
+
+spring:
+  application:
+    name: verification-service
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+
+  # Base profile is in-memory H2 speaking MSSQLServer syntax so the service, its tests and a
+  # laptop demo all run without Docker. application-sqlserver.yml replaces this with MS SQL.
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:fayda;MODE=MSSQLServer;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${DDL_AUTO:create-drop}
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+  jackson:
+    default-property-inclusion: non_null
+
+verification:
+  security:
+    # The trailing colon is load-bearing: without it an unset variable binds the literal text
+    # "${JWT_SECRET}", which is non-blank so it bypasses AppProperties' dev default and trips
+    # JwtService's 32-byte HS256 guard. Empty means "not supplied", and the dev default plus the
+    # prod-profile refusal in JwtService handle it.
+    jwt-secret: ${JWT_SECRET:}
+    issuer: ${JWT_ISSUER:fayda-id-check}
+  hashing:
+    pepper: ${HASH_PEPPER:}
+  challenge:
+    hmac-secret: ${CHALLENGE_HMAC_SECRET:}
+  crypto:
+    replay-window-seconds: ${REPLAY_WINDOW_SECONDS:120}
+    max-image-bytes: ${MAX_IMAGE_BYTES:2000000}
+    max-frames: ${MAX_FRAMES:12}
+  deadline:
+    created-seconds: ${STAGE_DEADLINE_CREATED_SECONDS:300}
+    sweep-interval-ms: ${SWEEP_INTERVAL_MS:15000}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    per-user-requests: ${ATTEMPT_RATE_LIMIT_PER_MINUTE:60}
+    per-ip-requests: ${IP_RATE_LIMIT_PER_MINUTE:120}
+  inference:
+    base-url: ${INFERENCE_BASE_URL:http://localhost:8000}
+    connect-timeout-ms: ${INFERENCE_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${INFERENCE_TIMEOUT_MS:10000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    # requestId is put in the MDC by RequestIdFilter for every request; the pattern never prints
+    # a payload, a national id or an image — those are not log fields anywhere in this service.
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'} %5p [req:%X{requestId:-none}] %logger{36} - %msg%n"

@@ -1,0 +1,11 @@
+# Production ML extras — installed only in the python:3.12 image built by the Dockerfile.
+#
+# Kept separate from requirements.txt because TensorFlow publishes no cp314 wheels: the host
+# venv (3.14) must keep installing requirements.txt and running the stub backend, while the
+# container gets real inference on 3.12. Nothing here imports TensorFlow at module import time
+# (see app/models/tf_backend.py), so the two environments can share one codebase.
+-r requirements.txt
+
+# CPU-only: the scored request is a handful of small frames, and a GPU in the image would make
+# the healthcheck depend on drivers that the deployment target does not guarantee.
+tensorflow-cpu>=2.17,<2.21

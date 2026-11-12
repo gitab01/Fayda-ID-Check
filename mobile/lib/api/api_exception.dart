@@ -22,8 +22,10 @@ enum ApiErrorKind {
   /// `409` — the attempt is not in the state this call expects.
   stateConflict,
 
-  /// `409` with `CHALLENGE_SEQUENCE_MISMATCH` — the recorded liveness sequence
-  /// is not the one the server derived from the seed.
+  /// `CHALLENGE_SEQUENCE_MISMATCH`, which the service sends as `422` — the
+  /// recorded liveness sequence is not the one it derived from the stored seed.
+  /// Matched on the code before the status, because the status alone would
+  /// classify it as ordinary payload validation.
   challengeMismatch,
 
   /// `422` — the decrypted payload failed validation.

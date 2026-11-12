@@ -407,9 +407,10 @@ class SelfieFrame {
 
 /// The decrypted body of `POST /attempts/{id}/selfie`.
 ///
-/// `executedActions` is recorded in the order the user was prompted, and the
-/// seed is echoed so the server can re-derive the sequence (a mismatch is
-/// `CHALLENGE_SEQUENCE_MISMATCH`).
+/// `executedActions` is recorded in the order the user was prompted. The server re-derives that
+/// order from the seed it stored when the attempt was started — not from the `challengeSeed`
+/// echoed here, which is carried for traceability and is not bound by the request DTO. A
+/// disagreement comes back as `CHALLENGE_SEQUENCE_MISMATCH`.
 class SelfiePayload {
   const SelfiePayload({
     required this.frames,

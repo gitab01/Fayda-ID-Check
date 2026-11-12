@@ -114,10 +114,11 @@ Run and passing on this machine:
 - `verification-service`: 63 Maven tests, including the attempt-flow integration
   test that drives `POST /attempts` through capture, verify and retry;
 - `inference-service`: 149 pytest tests (stub backend, contract, decision rules);
-- `mobile`: `flutter analyze` reports no issues and 51 tests pass — envelope bytes,
-  the controller's key/`keyId`/frame-count invariants, the consent gate, and every rule
-  of the on-device quality gate in `capture/quality.dart` against synthetic bitmaps, the
-  auto-shutter hold window included on an injected clock;
+- `mobile`: `flutter analyze` reports no issues and 61 tests pass — envelope bytes,
+  the controller's key/`keyId`/frame-count invariants, the consent gate, every rule
+  of the on-device quality gate in `capture/quality.dart` against synthetic bitmaps
+  (the auto-shutter hold window included on an injected clock), and the JSON key sets
+  both capture bodies are built from;
 - `training/evaluate.py`: `--self-test` for both metric kinds, plus CSV input.
 
 Not run here, so not claimed:

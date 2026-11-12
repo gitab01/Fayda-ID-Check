@@ -207,7 +207,7 @@ class AttemptFlowIntegrationTest {
     // ------------------------------------------------------------------ helpers ----------------
 
     /** The pieces of a started attempt the rest of a flow needs. */
-    private record Started(long attemptId, List<String> actions) {
+    private record Started(long attemptId, List<String> actions, String challengeSeed) {
     }
 
     private Started startAttempt(String bearer, byte[] key, String documentType) throws Exception {
@@ -231,7 +231,9 @@ class AttemptFlowIntegrationTest {
         List<String> actions = new java.util.ArrayList<>();
         body.path("challenge").path("actions").forEach(node -> actions.add(node.asText()));
         org.assertj.core.api.Assertions.assertThat(actions).hasSize(3);
-        return new Started(body.path("attemptId").asLong(), List.copyOf(actions));
+        String seed = body.path("challenge").path("seed").asText();
+        org.assertj.core.api.Assertions.assertThat(seed).as("the seed the client echoes").isNotBlank();
+        return new Started(body.path("attemptId").asLong(), List.copyOf(actions), seed);
     }
 
     private void submitDocument(String bearer, byte[] key, Started started) throws Exception {
@@ -245,7 +247,8 @@ class AttemptFlowIntegrationTest {
     private void submitSelfie(String bearer, byte[] key, Started started) throws Exception {
         mvc.perform(bearer(post("/api/v1/attempts/" + started.attemptId() + "/selfie")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(envelope(key, selfieBody(started.actions()))), bearer))
+                        .content(envelope(key, selfieBody(started.actions(),
+                                started.challengeSeed()))), bearer))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("CAPTURED"));
     }
@@ -259,7 +262,13 @@ class AttemptFlowIntegrationTest {
                 "quality", Map.of("blurScore", 212.5, "glareRatio", 0.01, "cornersFound", true)));
     }
 
-    private String selfieBody(List<String> actions) throws Exception {
+    /**
+     * Built with the keys the mobile client really sends, including the echoed `challengeSeed`,
+     * which {@link id.fayda.verification.api.dto.SelfiePayload} does not bind: the sequence is
+     * re-derived from the attempt's own stored seed, so the extra field has to be tolerated, never
+     * required. A fixture that omitted it would leave that tolerance untested.
+     */
+    private String selfieBody(List<String> actions, String challengeSeed) throws Exception {
         long now = System.currentTimeMillis();
         List<Map<String, Object>> frames = actions.stream()
                 .map(action -> Map.<String, Object>of("bytes64", base64(jpeg()), "action", action,
@@ -268,6 +277,7 @@ class AttemptFlowIntegrationTest {
         return json.writeValueAsString(Map.of(
                 "frames", frames,
                 "executedActions", actions,
+                "challengeSeed", challengeSeed,
                 "quality", Map.of("blurScore", 180.0, "faceBox", List.of(412, 180, 240, 300))));
     }
 

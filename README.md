@@ -69,9 +69,13 @@ cd mobile                      && flutter analyze && flutter test
 Three of these tests enforce invariants rather than behaviour, and they are the
 reason the privacy claims in the case study are checkable:
 
-- the retention test walks every JPA entity and fails if any `byte[]`/Blob column exists;
-- the statelessness test monkeypatches file writes and DB clients, then runs a full `/verify`;
-- the envelope tests reject a tampered tag and a `sentAtUtc` outside the 120 s replay window.
+- the retention test walks every JPA entity and the baseline SQL, and fails on a `byte[]`,
+  Blob or Clob field, a string column wider than 1024, or a binary SQL type;
+- the statelessness test snapshots the whole directory tree around real scoring calls, greps
+  `app/` for every file-writing construct, and checks that no frame bytes reach a log line or
+  a response body;
+- the envelope tests reject a tampered tag and a `sentAtUtc` outside the 120 s replay window,
+  in both directions, while accepting one just inside it.
 
 ## Models
 
@@ -110,8 +114,10 @@ Run and passing on this machine:
 - `verification-service`: 63 Maven tests, including the attempt-flow integration
   test that drives `POST /attempts` through capture, verify and retry;
 - `inference-service`: 149 pytest tests (stub backend, contract, decision rules);
-- `mobile`: `flutter analyze` reports no issues and 21 tests pass — envelope bytes,
-  the controller's key/`keyId`/frame-count invariants, and the consent gate;
+- `mobile`: `flutter analyze` reports no issues and 51 tests pass — envelope bytes,
+  the controller's key/`keyId`/frame-count invariants, the consent gate, and every rule
+  of the on-device quality gate in `capture/quality.dart` against synthetic bitmaps, the
+  auto-shutter hold window included on an injected clock;
 - `training/evaluate.py`: `--self-test` for both metric kinds, plus CSV input.
 
 Not run here, so not claimed:
